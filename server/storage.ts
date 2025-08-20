@@ -350,17 +350,121 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Choose storage based on MongoDB connection
-let storageInstance: IStorage;
-
-try {
-  if (mongoose.connection.readyState === 1) {
-    storageInstance = new MongoStorage();
-  } else {
-    storageInstance = new MemStorage();
+// Always use MongoStorage - it will handle MongoDB connection checks internally
+class MongoStorageWrapper implements IStorage {
+  private mongoStorage: MongoStorage;
+  private memStorage: MemStorage;
+  
+  constructor() {
+    this.mongoStorage = new MongoStorage();
+    this.memStorage = new MemStorage();
   }
-} catch (error) {
-  storageInstance = new MemStorage();
+  
+  private isMongoConnected(): boolean {
+    return mongoose.connection.readyState === 1;
+  }
+  
+  async getUser(id: string): Promise<User | undefined> {
+    if (this.isMongoConnected()) {
+      return await this.mongoStorage.getUser(id);
+    }
+    return await this.memStorage.getUser(id);
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    if (this.isMongoConnected()) {
+      return await this.mongoStorage.getUserByUsername(username);
+    }
+    return await this.memStorage.getUserByUsername(username);
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    if (this.isMongoConnected()) {
+      return await this.mongoStorage.createUser(user);
+    }
+    return await this.memStorage.createUser(user);
+  }
+  
+  async getBankConfig(bankId: string): Promise<BankConfig | undefined> {
+    if (this.isMongoConnected()) {
+      return await this.mongoStorage.getBankConfig(bankId);
+    }
+    return await this.memStorage.getBankConfig(bankId);
+  }
+  
+  async getAllBankConfigs(): Promise<BankConfig[]> {
+    if (this.isMongoConnected()) {
+      return await this.mongoStorage.getAllBankConfigs();
+    }
+    return await this.memStorage.getAllBankConfigs();
+  }
+  
+  async getMockBankAccounts(bankId: string): Promise<MockBankAccount[]> {
+    // This can use either storage as it returns mock data
+    return await this.mongoStorage.getMockBankAccounts(bankId);
+  }
+  
+  async createBankConnection(connection: InsertBankConnection): Promise<BankConnection> {
+    if (this.isMongoConnected()) {
+      console.log('💾 Storing bank connection in MongoDB');
+      return await this.mongoStorage.createBankConnection(connection);
+    }
+    return await this.memStorage.createBankConnection(connection);
+  }
+  
+  async createBankAccount(account: InsertBankAccount): Promise<BankAccount> {
+    if (this.isMongoConnected()) {
+      console.log('💾 Storing bank account in MongoDB');
+      return await this.mongoStorage.createBankAccount(account);
+    }
+    return await this.memStorage.createBankAccount(account);
+  }
+  
+  // MongoDB-specific methods (only work when MongoDB is connected)
+  async createAuthSession(sessionData: any): Promise<any> {
+    if (this.isMongoConnected() && this.mongoStorage.createAuthSession) {
+      console.log('💾 Storing auth session in MongoDB');
+      return await this.mongoStorage.createAuthSession(sessionData);
+    }
+    return null; // Fallback to no storage for auth sessions
+  }
+  
+  async getAuthSession(sessionToken: string): Promise<any> {
+    if (this.isMongoConnected() && this.mongoStorage.getAuthSession) {
+      return await this.mongoStorage.getAuthSession(sessionToken);
+    }
+    return null;
+  }
+  
+  async updateAuthSession(sessionToken: string, updates: any): Promise<any> {
+    if (this.isMongoConnected() && this.mongoStorage.updateAuthSession) {
+      return await this.mongoStorage.updateAuthSession(sessionToken, updates);
+    }
+    return null;
+  }
+  
+  async createOTPRecord(otpData: any): Promise<any> {
+    if (this.isMongoConnected() && this.mongoStorage.createOTPRecord) {
+      console.log('💾 Storing OTP record in MongoDB');
+      return await this.mongoStorage.createOTPRecord(otpData);
+    }
+    return null;
+  }
+  
+  async getOTPRecord(sessionToken: string): Promise<any> {
+    if (this.isMongoConnected() && this.mongoStorage.getOTPRecord) {
+      return await this.mongoStorage.getOTPRecord(sessionToken);
+    }
+    return null;
+  }
+  
+  async verifyOTP(sessionToken: string, code: string): Promise<boolean> {
+    if (this.isMongoConnected() && this.mongoStorage.verifyOTP) {
+      console.log('✅ Verifying OTP from MongoDB');
+      return await this.mongoStorage.verifyOTP(sessionToken, code);
+    }
+    return false; // Fallback to rejection
+  }
 }
 
-export const storage = storageInstance;
+export const storage = new MongoStorageWrapper();
