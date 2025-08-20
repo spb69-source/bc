@@ -111,13 +111,13 @@ export class MongoStorage implements IStorage {
         id: 'acc_1',
         type: 'Checking Account',
         accountNumber: '****-****-****-1234',
-        balance: 2450.75
+        balance: 0
       },
       {
         id: 'acc_2',
         type: 'Savings Account',
         accountNumber: '****-****-****-5678',
-        balance: 15832.20
+        balance: 0
       }
     ];
 
@@ -127,7 +127,7 @@ export class MongoStorage implements IStorage {
         id: 'acc_3',
         type: 'Credit Card',
         accountNumber: '****-****-****-9012',
-        balance: -1250.30
+        balance: 0
       });
     }
 
@@ -302,13 +302,13 @@ export class MemStorage implements IStorage {
         id: 'acc_1',
         type: 'Checking Account',
         accountNumber: '****-****-****-1234',
-        balance: 2450.75
+        balance: 0
       },
       {
         id: 'acc_2',
         type: 'Savings Account',
         accountNumber: '****-****-****-5678',
-        balance: 15832.20
+        balance: 0
       }
     ];
 
@@ -318,7 +318,7 @@ export class MemStorage implements IStorage {
         id: 'acc_3',
         type: 'Credit Card',
         accountNumber: '****-****-****-9012',
-        balance: -1250.30
+        balance: 0
       });
     }
 

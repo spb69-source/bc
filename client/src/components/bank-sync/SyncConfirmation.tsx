@@ -36,12 +36,6 @@ export function SyncConfirmation({ accounts, onConfirm, isLoading }: SyncConfirm
     await onConfirm(Array.from(selectedAccounts));
   };
 
-  const formatBalance = (balance: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(balance);
-  };
 
   return (
     <Card className="bg-surface shadow-md mb-6">
@@ -71,8 +65,7 @@ export function SyncConfirmation({ accounts, onConfirm, isLoading }: SyncConfirm
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="font-medium text-secondary">{formatBalance(account.balance)}</span>
-                  <p className="text-sm text-gray-500">Available Balance</p>
+                  <span className="text-sm text-gray-500">Account</span>
                 </div>
               </div>
             </div>

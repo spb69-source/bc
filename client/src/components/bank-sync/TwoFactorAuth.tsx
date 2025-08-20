@@ -59,8 +59,7 @@ export function TwoFactorAuth({ onSubmit, onResendOTP, isLoading }: TwoFactorAut
         <div className="mb-6">
           <h2 className="text-2xl font-semibold text-secondary mb-2">Two-Factor Authentication</h2>
           <p className="text-gray-600">
-            We've sent a verification code to your registered mobile number ending in{' '}
-            <span className="font-medium">***-**-1234</span>.
+            We've sent a verification code to your registered mobile number.
           </p>
         </div>
 
