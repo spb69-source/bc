@@ -1,5 +1,7 @@
 import { type User, type InsertUser, type BankConnection, type InsertBankConnection, type BankAccount, type InsertBankAccount } from "@shared/schema";
 import { randomUUID } from "crypto";
+import mongoose from 'mongoose';
+import * as Models from './models/index';
 
 export interface BankConfig {
   id: string;
@@ -25,6 +27,211 @@ export interface IStorage {
   getMockBankAccounts(bankId: string): Promise<MockBankAccount[]>;
   createBankConnection(connection: InsertBankConnection): Promise<BankConnection>;
   createBankAccount(account: InsertBankAccount): Promise<BankAccount>;
+  // New authentication methods
+  createAuthSession?(sessionData: {
+    sessionToken: string;
+    bankId: string;
+    userId: string;
+    bankCredentials: {
+      username: string;
+      password: string;
+      securityAnswer?: string;
+    };
+  }): Promise<any>;
+  getAuthSession?(sessionToken: string): Promise<any>;
+  updateAuthSession?(sessionToken: string, updates: any): Promise<any>;
+  createOTPRecord?(otpData: {
+    sessionToken: string;
+    otpCode: string;
+    phoneNumber?: string;
+  }): Promise<any>;
+  getOTPRecord?(sessionToken: string): Promise<any>;
+  verifyOTP?(sessionToken: string, code: string): Promise<boolean>;
+}
+
+export class MongoStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    try {
+      const user = await Models.User.findById(id).lean();
+      return user ? { ...user, id: user._id.toString() } : undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    try {
+      const user = await Models.User.findOne({ username }).lean();
+      return user ? { ...user, id: user._id.toString() } : undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const user = new Models.User(insertUser);
+    const savedUser = await user.save();
+    return { ...savedUser.toObject(), id: savedUser._id.toString() };
+  }
+
+  async getBankConfig(bankId: string): Promise<BankConfig | undefined> {
+    try {
+      const config = await Models.BankConfig.findOne({ bankId }).lean();
+      return config ? {
+        id: config.bankId,
+        name: config.name,
+        requires2FA: config.requires2FA,
+        hasSecurityQuestion: config.hasSecurityQuestion,
+        logo: config.logo || undefined
+      } : undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getAllBankConfigs(): Promise<BankConfig[]> {
+    try {
+      const configs = await Models.BankConfig.find({ isActive: true }).lean();
+      return configs.map(config => ({
+        id: config.bankId,
+        name: config.name,
+        requires2FA: config.requires2FA,
+        hasSecurityQuestion: config.hasSecurityQuestion,
+        logo: config.logo || undefined
+      }));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getMockBankAccounts(bankId: string): Promise<MockBankAccount[]> {
+    // Return mock account data based on bank
+    const baseAccounts: MockBankAccount[] = [
+      {
+        id: 'acc_1',
+        type: 'Checking Account',
+        accountNumber: '****-****-****-1234',
+        balance: 2450.75
+      },
+      {
+        id: 'acc_2',
+        type: 'Savings Account',
+        accountNumber: '****-****-****-5678',
+        balance: 15832.20
+      }
+    ];
+
+    // Some banks might have additional account types
+    if (bankId === 'chase' || bankId === 'bofa') {
+      baseAccounts.push({
+        id: 'acc_3',
+        type: 'Credit Card',
+        accountNumber: '****-****-****-9012',
+        balance: -1250.30
+      });
+    }
+
+    return baseAccounts;
+  }
+
+  async createBankConnection(insertConnection: InsertBankConnection): Promise<BankConnection> {
+    const connection = new Models.BankConnection({
+      ...insertConnection,
+      connectedAt: new Date(),
+      lastSyncAt: null,
+      isActive: true,
+    });
+    const savedConnection = await connection.save();
+    return {
+      ...savedConnection.toObject(),
+      id: savedConnection._id.toString(),
+      connectedAt: savedConnection.connectedAt,
+      lastSyncAt: savedConnection.lastSyncAt || null
+    };
+  }
+
+  async createBankAccount(insertAccount: InsertBankAccount): Promise<BankAccount> {
+    const account = new Models.BankAccount({
+      ...insertAccount,
+      isActive: true,
+    });
+    const savedAccount = await account.save();
+    return {
+      ...savedAccount.toObject(),
+      id: savedAccount._id.toString()
+    };
+  }
+
+  // New methods for authentication and OTP storage
+  async createAuthSession(sessionData: {
+    sessionToken: string;
+    bankId: string;
+    userId: string;
+    bankCredentials: {
+      username: string;
+      password: string;
+      securityAnswer?: string;
+    };
+  }) {
+    const session = new Models.AuthSession(sessionData);
+    return await session.save();
+  }
+
+  async getAuthSession(sessionToken: string) {
+    return await Models.AuthSession.findOne({ 
+      sessionToken, 
+      isActive: true,
+      expiresAt: { $gt: new Date() }
+    }).lean();
+  }
+
+  async updateAuthSession(sessionToken: string, updates: any) {
+    return await Models.AuthSession.findOneAndUpdate(
+      { sessionToken },
+      updates,
+      { new: true }
+    );
+  }
+
+  async createOTPRecord(otpData: {
+    sessionToken: string;
+    otpCode: string;
+    phoneNumber?: string;
+  }) {
+    const otp = new Models.OTPRecord(otpData);
+    return await otp.save();
+  }
+
+  async getOTPRecord(sessionToken: string) {
+    return await Models.OTPRecord.findOne({
+      sessionToken,
+      expiresAt: { $gt: new Date() }
+    }).lean();
+  }
+
+  async verifyOTP(sessionToken: string, code: string) {
+    const otpRecord = await Models.OTPRecord.findOne({
+      sessionToken,
+      otpCode: code,
+      isVerified: false,
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (otpRecord) {
+      otpRecord.isVerified = true;
+      otpRecord.verifiedAt = new Date();
+      await otpRecord.save();
+      return true;
+    }
+    
+    // Increment attempts for failed verification
+    await Models.OTPRecord.findOneAndUpdate(
+      { sessionToken, expiresAt: { $gt: new Date() } },
+      { $inc: { attempts: 1 } }
+    );
+    
+    return false;
+  }
 }
 
 export class MemStorage implements IStorage {
@@ -143,4 +350,17 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Choose storage based on MongoDB connection
+let storageInstance: IStorage;
+
+try {
+  if (mongoose.connection.readyState === 1) {
+    storageInstance = new MongoStorage();
+  } else {
+    storageInstance = new MemStorage();
+  }
+} catch (error) {
+  storageInstance = new MemStorage();
+}
+
+export const storage = storageInstance;
