@@ -56,12 +56,20 @@ export default function BankSync() {
   // OTP verification mutation
   const otpMutation = useMutation({
     mutationFn: async (code: string) => {
-      const response = await apiRequest(
-        'POST',
-        `/api/banks/${syncState.selectedBank?.id}/verify-otp`,
-        { code },
-        { headers: { sessionToken } }
-      );
+      const response = await fetch(`/api/banks/${syncState.selectedBank?.id}/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'sessionToken': sessionToken,
+        },
+        body: JSON.stringify({ code }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -81,7 +89,9 @@ export default function BankSync() {
     try {
       setSyncState(prev => ({ ...prev, isLoading: true }));
       const response = await fetch(`/api/banks/${syncState.selectedBank?.id}/accounts`, {
-        headers: { sessionToken },
+        headers: { 
+          'sessionToken': sessionToken,
+        },
       });
       const data = await response.json();
       
@@ -92,6 +102,8 @@ export default function BankSync() {
           currentStep: 'sync-confirmation',
           isLoading: false,
         }));
+      } else {
+        setSyncState(prev => ({ ...prev, error: data.message || 'Failed to fetch accounts', isLoading: false }));
       }
     } catch (error: any) {
       setSyncState(prev => ({ ...prev, error: error.message, isLoading: false }));
@@ -101,12 +113,20 @@ export default function BankSync() {
   // Sync accounts mutation
   const syncMutation = useMutation({
     mutationFn: async (accountIds: string[]) => {
-      const response = await apiRequest(
-        'POST',
-        `/api/banks/${syncState.selectedBank?.id}/sync`,
-        { bankId: syncState.selectedBank?.id, accountIds },
-        { headers: { sessionToken } }
-      );
+      const response = await fetch(`/api/banks/${syncState.selectedBank?.id}/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'sessionToken': sessionToken,
+        },
+        body: JSON.stringify({ bankId: syncState.selectedBank?.id, accountIds }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+      
       return response.json();
     },
     onSuccess: () => {
