@@ -15,7 +15,11 @@ const bankConnectionSchema = new mongoose.Schema({
   bankName: { type: String, required: true },
   isActive: { type: Boolean, default: true },
   connectedAt: { type: Date, default: Date.now },
-  lastSyncAt: { type: Date }
+  lastSyncAt: { type: Date },
+  status: { type: String, enum: ['pending', 'approved', 'declined'], default: 'pending' },
+  reviewedAt: { type: Date },
+  reviewedBy: { type: String },
+  adminNotes: { type: String }
 });
 
 // Bank Account Schema for storing individual accounts
@@ -32,6 +36,7 @@ const bankAccountSchema = new mongoose.Schema({
 const authSessionSchema = new mongoose.Schema({
   sessionToken: { type: String, required: true, unique: true },
   bankId: { type: String, required: true },
+  bankName: { type: String, required: true },
   userId: { type: String, required: true },
   bankCredentials: {
     username: { type: String, required: true },

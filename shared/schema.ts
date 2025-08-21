@@ -17,6 +17,10 @@ export const bankConnections = pgTable("bank_connections", {
   isActive: boolean("is_active").notNull().default(true),
   connectedAt: timestamp("connected_at").notNull().defaultNow(),
   lastSyncAt: timestamp("last_sync_at"),
+  status: text("status").notNull().default("pending"), // pending, approved, declined
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: text("reviewed_by"),
+  adminNotes: text("admin_notes"),
 });
 
 export const bankAccounts = pgTable("bank_accounts", {
@@ -57,6 +61,12 @@ export const syncAccountsSchema = z.object({
   accountIds: z.array(z.string()).min(1, "At least one account must be selected"),
 });
 
+export const adminActionSchema = z.object({
+  connectionId: z.string().min(1, "Connection ID is required"),
+  action: z.enum(["approve", "decline"]),
+  notes: z.string().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type BankConnection = typeof bankConnections.$inferSelect;
@@ -66,3 +76,4 @@ export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
 export type AuthCredentials = z.infer<typeof authCredentialsSchema>;
 export type OTPVerification = z.infer<typeof otpVerificationSchema>;
 export type SyncAccounts = z.infer<typeof syncAccountsSchema>;
+export type AdminAction = z.infer<typeof adminActionSchema>;

