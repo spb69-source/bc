@@ -1,0 +1,606 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Account Synchronization - SecureSync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#1565C0',
+                        'primary-dark': '#0D47A1',
+                        'secondary': '#37474F',
+                        'success': '#2E7D32',
+                        'error': '#C62828',
+                        'warning': '#F57C00',
+                        'surface': '#FFFFFF',
+                        'background': '#FAFAFA'
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-background font-inter">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-surface shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-shield-alt text-primary text-2xl mr-3"></i>
+                    <h1 class="text-xl font-semibold text-secondary">SecureSync</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">SSL Secured</span>
+                    <i class="fas fa-lock text-success"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- @COMPONENT: ProgressIndicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <div id="step1-indicator" class="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-sm font-medium">1</div>
+                    <span class="ml-2 text-sm font-medium text-primary">Select Bank</span>
+                </div>
+                <div class="flex-1 mx-4">
+                    <div class="h-1 bg-gray-200 rounded">
+                        <div id="progress-bar" class="h-1 bg-primary rounded transition-all duration-300" style="width: 25%"></div>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div id="step2-indicator" class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-sm font-medium">2</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Authenticate</span>
+                </div>
+                <div class="flex-1 mx-4">
+                    <div class="h-1 bg-gray-200 rounded"></div>
+                </div>
+                <div class="flex items-center">
+                    <div id="step3-indicator" class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-sm font-medium">3</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Sync Complete</span>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: ProgressIndicator -->
+
+        <!-- @COMPONENT: BankSelector -->
+        <div id="bank-selector-step" class="bg-surface rounded-lg shadow-md p-6 mb-6">
+            <div class="mb-6">
+                <h2 class="text-2xl font-semibold text-secondary mb-2">Connect Your Bank Account</h2>
+                <p class="text-gray-600">Select your bank from the list below to securely link your account.</p>
+            </div>
+
+            <div class="mb-6">
+                <label for="bank-select" class="block text-sm font-medium text-secondary mb-2">Choose Your Bank</label>
+                <div class="relative">
+                    <select id="bank-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary appearance-none bg-white">
+                        <option value="">Select a bank...</option>
+                        <option value="chase">JPMorgan Chase & Co.</option>
+                        <option value="bofa">Bank of America</option>
+                        <option value="citi">Citibank (Citigroup)</option>
+                        <option value="wells">Wells Fargo</option>
+                        <option value="usbank">U.S. Bank</option>
+                        <option value="pnc">PNC Bank</option>
+                        <option value="truist">Truist Financial</option>
+                        <option value="capital">Capital One</option>
+                        <option value="hsbc">HSBC Bank USA</option>
+                        <option value="amex">American Express Bank</option>
+                        <option value="paypal">PayPal</option>
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-primary mr-3 mt-0.5"></i>
+                    <div>
+                        <h3 class="text-sm font-medium text-primary mb-1">Security Notice</h3>
+                        <p class="text-sm text-blue-700">Your banking credentials are encrypted using bank-level security. We never store your login information.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: BankSelector -->
+
+        <!-- @COMPONENT: LoginForm -->
+        <div id="login-form-step" class="hidden bg-surface rounded-lg shadow-md p-6 mb-6">
+            <div class="mb-6">
+                <div class="flex items-center mb-4">
+                    <img id="bank-logo" src="" alt="Bank Logo" class="w-8 h-8 mr-3 hidden">
+                    <h2 class="text-2xl font-semibold text-secondary">Login to <span id="selected-bank-name"></span></h2>
+                </div>
+                <p class="text-gray-600">Enter your online banking credentials to securely link your account.</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-error mr-3 mt-0.5"></i>
+                    <div>
+                        <h3 class="text-sm font-medium text-error mb-1">Authentication Failed</h3>
+                        <p id="error-text" class="text-sm text-red-700"></p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-secondary mb-2">Username / Email</label>
+                    <input type="text" id="username" name="username" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" data-mock="true" placeholder="Enter your username">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-secondary mb-2">Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary pr-12" data-mock="true" placeholder="Enter your password">
+                        <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bank-specific fields (shown conditionally) -->
+                <div id="additional-fields" class="hidden space-y-4">
+                    <div id="security-question-field" class="hidden">
+                        <label for="security-answer" class="block text-sm font-medium text-secondary mb-2">Security Question: What was your first pet's name?</label>
+                        <input type="text" id="security-answer" name="security-answer" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" data-mock="true" placeholder="Enter your answer">
+                    </div>
+                </div>
+
+                <button type="submit" id="login-button" class="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center" data-event="click:handleLogin">
+                    <span id="login-button-text">Continue Securely</span>
+                    <i id="login-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </form>
+        </div>
+        <!-- @END_COMPONENT: LoginForm -->
+
+        <!-- @COMPONENT: TwoFactorAuth -->
+        <div id="two-factor-step" class="hidden bg-surface rounded-lg shadow-md p-6 mb-6">
+            <div class="mb-6">
+                <h2 class="text-2xl font-semibold text-secondary mb-2">Two-Factor Authentication</h2>
+                <p class="text-gray-600">We've sent a verification code to your registered mobile number ending in <span class="font-medium">***-**-1234</span>.</p>
+            </div>
+
+            <form id="otp-form" class="space-y-4">
+                <div>
+                    <label for="otp-code" class="block text-sm font-medium text-secondary mb-2">Verification Code</label>
+                    <input type="text" id="otp-code" name="otp-code" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-center text-2xl font-mono tracking-widest" data-mock="true" placeholder="000000" maxlength="6">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-gray-600">Didn't receive the code?</span>
+                    <button type="button" id="resend-otp" class="text-sm text-primary hover:text-primary-dark font-medium">Resend Code</button>
+                </div>
+
+                <button type="submit" id="verify-button" class="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center" data-event="click:handleOTPVerification">
+                    <span id="verify-button-text">Verify & Continue</span>
+                    <i id="verify-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </form>
+
+            <div class="mt-4 text-center">
+                <span id="otp-timer" class="text-sm text-gray-500">Code expires in 04:59</span>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: TwoFactorAuth -->
+
+        <!-- @COMPONENT: SyncConfirmation -->
+        <div id="sync-confirmation-step" class="hidden bg-surface rounded-lg shadow-md p-6 mb-6">
+            <div class="mb-6">
+                <h2 class="text-2xl font-semibold text-secondary mb-2">Account Synchronization</h2>
+                <p class="text-gray-600">Review the accounts we found and confirm which ones you'd like to sync.</p>
+            </div>
+
+            <div class="space-y-4 mb-6" data-mock="true">
+                <!-- @MAP: accounts.map(account => ( -->
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors duration-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="account-1" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+                            <div class="ml-4">
+                                <h3 class="font-medium text-secondary">Checking Account</h3>
+                                <p class="text-sm text-gray-500">****-****-****-1234</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-medium text-secondary">$2,450.75</span>
+                            <p class="text-sm text-gray-500">Available Balance</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors duration-200">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="account-2" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+                            <div class="ml-4">
+                                <h3 class="font-medium text-secondary">Savings Account</h3>
+                                <p class="text-sm text-gray-500">****-****-****-5678</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-medium text-secondary">$15,832.20</span>
+                            <p class="text-sm text-gray-500">Available Balance</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_MAP )) -->
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <i class="fas fa-shield-alt text-warning mr-3 mt-0.5"></i>
+                    <div>
+                        <h3 class="text-sm font-medium text-warning mb-1">Data Security</h3>
+                        <p class="text-sm text-yellow-700">Your account data will be encrypted and securely stored. You can disconnect your accounts at any time.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="confirm-sync-button" class="w-full bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center" data-event="click:handleSyncConfirmation">
+                <span id="sync-button-text">Confirm & Sync Accounts</span>
+                <i id="sync-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+            </button>
+        </div>
+        <!-- @END_COMPONENT: SyncConfirmation -->
+
+        <!-- @COMPONENT: SuccessMessage -->
+        <div id="success-step" class="hidden bg-surface rounded-lg shadow-md p-6 text-center">
+            <div class="mb-6">
+                <div class="mx-auto w-16 h-16 bg-success rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-check text-white text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-semibold text-secondary mb-2">Account Successfully Connected!</h2>
+                <p class="text-gray-600">Your <span id="success-bank-name" data-bind="selectedBank.name">bank</span> accounts have been securely linked and synchronized.</p>
+            </div>
+
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-center">
+                    <i class="fas fa-sync-alt text-success mr-3"></i>
+                    <div>
+                        <h3 class="text-sm font-medium text-success mb-1">Sync Status: Active</h3>
+                        <p class="text-sm text-green-700">Your account data will be updated automatically every 24 hours.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-4">
+                <button class="flex-1 bg-primary hover:bg-primary-dark text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200">
+                    View Dashboard
+                </button>
+                <button class="flex-1 border border-gray-300 text-secondary hover:bg-gray-50 font-medium py-3 px-4 rounded-lg transition-colors duration-200">
+                    Add Another Bank
+                </button>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: SuccessMessage -->
+    </div>
+
+    <!-- @COMPONENT: LoadingOverlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-surface rounded-lg p-8 max-w-sm mx-4 text-center">
+            <div class="mb-4">
+                <i class="fas fa-sync-alt fa-spin text-primary text-3xl"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-secondary mb-2">Connecting to Your Bank</h3>
+            <p class="text-gray-600 text-sm">Please wait while we securely establish the connection...</p>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: LoadingOverlay -->
+
+    <script>
+        (function() {
+            // @STATE: currentStep:string = 'bank-selector'
+            // @STATE: selectedBank:object = null
+            // @STATE: isLoading:boolean = false
+            
+            let currentStep = 'bank-selector';
+            let selectedBank = null;
+            let otpTimer = null;
+
+            const steps = {
+                'bank-selector': 1,
+                'login': 2,
+                'two-factor': 2,
+                'sync-confirmation': 2,
+                'success': 3
+            };
+
+            // Bank configurations
+            const bankConfigs = {
+                'chase': { 
+                    name: 'JPMorgan Chase & Co.', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'bofa': { 
+                    name: 'Bank of America', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: true,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'citi': { 
+                    name: 'Citibank (Citigroup)', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'wells': { 
+                    name: 'Wells Fargo', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: true,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'usbank': { 
+                    name: 'U.S. Bank', 
+                    requires2FA: false, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'pnc': { 
+                    name: 'PNC Bank', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'truist': { 
+                    name: 'Truist Financial', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'capital': { 
+                    name: 'Capital One', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'hsbc': { 
+                    name: 'HSBC Bank USA', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: true,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'amex': { 
+                    name: 'American Express Bank', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                },
+                'paypal': { 
+                    name: 'PayPal', 
+                    requires2FA: true, 
+                    hasSecurityQuestion: false,
+                    logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=32&h=32&fit=crop'
+                }
+            };
+
+            function updateProgressIndicator(step) {
+                const stepNumber = steps[step];
+                const progressBar = document.getElementById('progress-bar');
+                const step1 = document.getElementById('step1-indicator');
+                const step2 = document.getElementById('step2-indicator');
+                const step3 = document.getElementById('step3-indicator');
+
+                // Reset all indicators
+                [step1, step2, step3].forEach((indicator, index) => {
+                    if (index + 1 <= stepNumber) {
+                        indicator.className = 'flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-sm font-medium';
+                    } else {
+                        indicator.className = 'flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-sm font-medium';
+                    }
+                });
+
+                // Update progress bar
+                const progress = (stepNumber / 3) * 100;
+                progressBar.style.width = `${progress}%`;
+            }
+
+            function showStep(stepId) {
+                // Hide all steps
+                document.querySelectorAll('[id$="-step"]').forEach(step => {
+                    step.classList.add('hidden');
+                });
+
+                // Show current step
+                document.getElementById(stepId + '-step').classList.remove('hidden');
+                currentStep = stepId;
+                updateProgressIndicator(stepId);
+            }
+
+            function showError(message) {
+                const errorDiv = document.getElementById('error-message');
+                const errorText = document.getElementById('error-text');
+                errorText.textContent = message;
+                errorDiv.classList.remove('hidden');
+            }
+
+            function hideError() {
+                document.getElementById('error-message').classList.add('hidden');
+            }
+
+            function showLoading(buttonId, spinnerId, textId, loadingText) {
+                document.getElementById(buttonId).disabled = true;
+                document.getElementById(spinnerId).classList.remove('hidden');
+                document.getElementById(textId).textContent = loadingText;
+            }
+
+            function hideLoading(buttonId, spinnerId, textId, originalText) {
+                document.getElementById(buttonId).disabled = false;
+                document.getElementById(spinnerId).classList.add('hidden');
+                document.getElementById(textId).textContent = originalText;
+            }
+
+            function startOTPTimer() {
+                let timeLeft = 300; // 5 minutes
+                const timerElement = document.getElementById('otp-timer');
+                
+                otpTimer = setInterval(() => {
+                    const minutes = Math.floor(timeLeft / 60);
+                    const seconds = timeLeft % 60;
+                    timerElement.textContent = `Code expires in ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(otpTimer);
+                        timerElement.textContent = 'Code expired';
+                        timerElement.classList.add('text-error');
+                    }
+                    timeLeft--;
+                }, 1000);
+            }
+
+            // Bank selector event
+            document.getElementById('bank-select').addEventListener('change', function(e) {
+                const bankCode = e.target.value;
+                if (bankCode) {
+                    selectedBank = bankConfigs[bankCode];
+                    
+                    // Update login form
+                    document.getElementById('selected-bank-name').textContent = selectedBank.name;
+                    
+                    // Show/hide bank-specific fields
+                    const additionalFields = document.getElementById('additional-fields');
+                    const securityQuestionField = document.getElementById('security-question-field');
+                    
+                    if (selectedBank.hasSecurityQuestion) {
+                        additionalFields.classList.remove('hidden');
+                        securityQuestionField.classList.remove('hidden');
+                    } else {
+                        additionalFields.classList.add('hidden');
+                        securityQuestionField.classList.add('hidden');
+                    }
+                    
+                    showStep('login-form');
+                }
+            });
+
+            // Login form submission
+            document.getElementById('login-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                hideError();
+                
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+                
+                if (!username || !password) {
+                    showError('Please enter both username and password.');
+                    return;
+                }
+
+                showLoading('login-button', 'login-spinner', 'login-button-text', 'Authenticating...');
+                
+                // TODO: Implement actual bank API authentication
+                setTimeout(() => {
+                    hideLoading('login-button', 'login-spinner', 'login-button-text', 'Continue Securely');
+                    
+                    // Simulate random authentication failure for demo
+                    if (Math.random() < 0.3) {
+                        showError('Invalid credentials. Please check your username and password and try again.');
+                        return;
+                    }
+                    
+                    if (selectedBank.requires2FA) {
+                        showStep('two-factor');
+                        startOTPTimer();
+                    } else {
+                        showStep('sync-confirmation');
+                    }
+                }, 2000);
+            });
+
+            // OTP form submission
+            document.getElementById('otp-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const otpCode = document.getElementById('otp-code').value.trim();
+                
+                if (otpCode.length !== 6) {
+                    showError('Please enter a valid 6-digit verification code.');
+                    return;
+                }
+
+                showLoading('verify-button', 'verify-spinner', 'verify-button-text', 'Verifying...');
+                
+                // TODO: Implement actual OTP verification
+                setTimeout(() => {
+                    hideLoading('verify-button', 'verify-spinner', 'verify-button-text', 'Verify & Continue');
+                    
+                    // Simulate random OTP failure for demo
+                    if (Math.random() < 0.2) {
+                        showError('Invalid verification code. Please try again.');
+                        return;
+                    }
+                    
+                    if (otpTimer) {
+                        clearInterval(otpTimer);
+                    }
+                    
+                    showStep('sync-confirmation');
+                }, 1500);
+            });
+
+            // Resend OTP
+            document.getElementById('resend-otp').addEventListener('click', function(e) {
+                e.preventDefault();
+                // TODO: Implement resend OTP functionality
+                alert('A new verification code has been sent to your registered mobile number.');
+                if (otpTimer) {
+                    clearInterval(otpTimer);
+                }
+                startOTPTimer();
+            });
+
+            // Sync confirmation
+            document.getElementById('confirm-sync-button').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                showLoading('confirm-sync-button', 'sync-spinner', 'sync-button-text', 'Syncing Accounts...');
+                document.getElementById('loading-overlay').classList.remove('hidden');
+                
+                // TODO: Implement actual account synchronization
+                setTimeout(() => {
+                    hideLoading('confirm-sync-button', 'sync-spinner', 'sync-button-text', 'Confirm & Sync Accounts');
+                    document.getElementById('loading-overlay').classList.add('hidden');
+                    document.getElementById('success-bank-name').textContent = selectedBank.name;
+                    showStep('success');
+                }, 3000);
+            });
+
+            // Password visibility toggle
+            document.querySelector('.fa-eye').parentElement.addEventListener('click', function() {
+                const passwordInput = document.getElementById('password');
+                const icon = this.querySelector('i');
+                
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.className = 'fas fa-eye-slash';
+                } else {
+                    passwordInput.type = 'password';
+                    icon.className = 'fas fa-eye';
+                }
+            });
+
+            // OTP input formatting
+            document.getElementById('otp-code').addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 6) value = value.slice(0, 6);
+                e.target.value = value;
+            });
+        })();
+    </script>
+</body>
+</html>
